@@ -1,6 +1,6 @@
 use std::io;
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{self, poll, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::layout::Rect;
 use ratatui::buffer::Buffer;
 use ratatui::text::Text;
@@ -10,7 +10,7 @@ use ratatui::DefaultTerminal;
 use ratatui::Frame;
 
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use rand::Rng;
 
 type GameTable = Vec<Vec<bool>>;
@@ -28,24 +28,37 @@ struct App {
     game_table: GameTable,
     game_table_size: (usize, usize)
 }
-
-
-
 impl App {
     fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let terminal_size = terminal.size()?;
         self.game_table_size = (terminal_size.height as usize, terminal_size.width as usize);
         self.game_table = initialize_game_table(self.game_table_size);
+        let mut last_update = Instant::now();
         while !self.exit {
-            self.game_table = self.update_game_table(self.game_table.clone());
+            if Instant::now() - last_update >= Duration::from_millis(100) {
+                self.game_table = self.update_game_table(self.game_table.clone());
+                last_update = Instant::now();
+            }
             terminal.draw(|frame| self.draw(frame))?;
-            thread::sleep(Duration::from_millis(100));
+            self.handle_events()?
         }
         Ok(())
     }
 
     fn draw(&self, frame: &mut Frame) {
         frame.render_widget(self, frame.area());
+    }
+
+    fn handle_events(&mut self) -> io::Result<()> {
+        if poll(Duration::from_millis(0))? {
+            match event::read()? {
+                Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
+                    self.handle_key_event(key_event)
+                }
+                _ => {}
+            };
+        }
+        Ok(())
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
