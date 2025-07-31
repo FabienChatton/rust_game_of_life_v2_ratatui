@@ -87,11 +87,10 @@ impl App {
 
     fn update_game_table(&self, game_table: GameTable) -> GameTable {
         let mut new_game_table: GameTable = initialize_empty_game_table(self.game_table_size);
-        let game_table_clone = game_table.clone();
 
         for (x, row) in game_table.iter().enumerate() {
             for (y, cell) in row.iter().enumerate() {
-                let neighbour = self.count_number_of_neighbour(&game_table_clone, x as u16, y as u16);
+                let neighbour = self.count_number_of_neighbour(&game_table, x as u16, y as u16);
                 let new_cell_state = &mut new_game_table[x][y];
                 match (neighbour, *cell) {
                     (2 | 3, true) => *new_cell_state = true,
