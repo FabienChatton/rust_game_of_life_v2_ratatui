@@ -3,15 +3,15 @@ use std::io;
 use crossterm::event::{self, poll, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::layout::Rect;
 use ratatui::buffer::Buffer;
-use ratatui::text::Text;
-use ratatui::widgets::Paragraph;
+use ratatui::text::{Line, Text};
+use ratatui::widgets::{Block, Paragraph};
 use ratatui::widgets::Widget;
 use ratatui::DefaultTerminal;
 use ratatui::Frame;
 
-use std::thread;
 use std::time::{Duration, Instant};
 use rand::Rng;
+use ratatui::style::Stylize;
 
 type GameTable = Vec<Vec<bool>>;
 
@@ -110,9 +110,15 @@ impl App {
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let table = print_game_table(&self.game_table);
-        Paragraph::new(Text::from(table))
-            .render(area, buf);
+        let game_table_printed = print_game_table(&self.game_table);
+        let instructions = Line::from(vec![
+            "Quit".into(),
+            " <q>".bold().blue()
+        ]);
+
+        Paragraph::new(Text::from(game_table_printed))
+            .block(Block::new().title(instructions.centered()))
+            .render(area, buf)
     }
 }
 
