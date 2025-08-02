@@ -26,7 +26,9 @@ fn main() -> io::Result<()> {
 struct App {
     exit: bool,
     game_table: GameTable,
-    game_table_size: (usize, usize)
+    game_table_size: (usize, usize),
+    time_to_update: Duration,
+    time_to_draw: Duration,
 }
 impl App {
     fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
@@ -36,10 +38,14 @@ impl App {
         let mut last_update = Instant::now();
         while !self.exit {
             if Instant::now() - last_update >= Duration::from_millis(100) {
+                let time_to_update_t1 = Instant::now();
                 self.game_table = self.update_game_table(self.game_table.clone());
+                self.time_to_update = Instant::now() - time_to_update_t1;
                 last_update = Instant::now();
             }
+            let time_to_draw_t1 = Instant::now();
             terminal.draw(|frame| self.draw(frame))?;
+            self.time_to_draw = Instant::now() - time_to_draw_t1;
             self.handle_events()?
         }
         Ok(())
@@ -113,7 +119,11 @@ impl Widget for &App {
         let game_table_printed = print_game_table(&self.game_table);
         let instructions = Line::from(vec![
             "Quit".into(),
-            " <q>".bold().blue()
+            " <q>".bold().blue(),
+            ", Time to update [ms]".into(),
+            format!(" {}", self.time_to_update.as_millis()).blue(),
+            ", Time to draw [ms]".into(),
+            format!(" {}", self.time_to_draw.as_millis()).blue(),
         ]);
 
         Paragraph::new(Text::from(game_table_printed))
