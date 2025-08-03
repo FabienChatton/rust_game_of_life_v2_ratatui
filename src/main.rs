@@ -1,5 +1,4 @@
 use std::io;
-
 use crossterm::event::{self, poll, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::layout::Rect;
 use ratatui::buffer::Buffer;
@@ -40,12 +39,12 @@ impl App {
             if Instant::now() - last_update >= Duration::from_millis(100) {
                 let time_to_update_t1 = Instant::now();
                 self.game_table = self.update_game_table(self.game_table.clone());
-                self.time_to_update = Instant::now() - time_to_update_t1;
+                self.time_to_update = time_to_update_t1.elapsed();
                 last_update = Instant::now();
             }
             let time_to_draw_t1 = Instant::now();
             terminal.draw(|frame| self.draw(frame))?;
-            self.time_to_draw = Instant::now() - time_to_draw_t1;
+            self.time_to_draw = time_to_draw_t1.elapsed();
             self.handle_events()?
         }
         Ok(())
