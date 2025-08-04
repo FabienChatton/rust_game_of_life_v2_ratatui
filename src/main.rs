@@ -74,12 +74,16 @@ impl App {
     }
 
     fn count_number_of_neighbour(&self, game_table: &GameTable, x: u16, y: u16) -> u8 {
+        let xi32 = x as i32;
+        let yi32 = y as i32;
+        let game_table_size0i32 = self.game_table_size.0 as i32;
+        let game_table_size1i32 = self.game_table_size.1 as i32;
         let mut count = 0;
         for iy in -1..=1 {
             for ix in -1..=1 {
                 if iy == 0 && ix == 0 { continue };
-                let real_x = (x as i32 + ix + self.game_table_size.0 as i32) % self.game_table_size.0 as i32;
-                let real_y = (y as i32 + iy + self.game_table_size.1 as i32) % self.game_table_size.1 as i32;
+                let real_x = (xi32 + ix + game_table_size0i32) % game_table_size0i32;
+                let real_y = (yi32 + iy + game_table_size1i32) % game_table_size1i32;
 
                 if game_table[real_x as usize][real_y as usize] {
                     count += 1;
