@@ -28,6 +28,7 @@ struct App {
     game_table_size: (usize, usize),
     time_to_update: Duration,
     time_to_draw: Duration,
+    game_pause: bool,
 }
 impl App {
     fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
@@ -36,11 +37,13 @@ impl App {
         self.game_table = initialize_game_table(self.game_table_size);
         let mut last_update = Instant::now();
         while !self.exit {
-            if Instant::now() - last_update >= Duration::from_millis(100) {
-                let time_to_update_t1 = Instant::now();
-                self.game_table = self.update_game_table(self.game_table.clone());
-                self.time_to_update = time_to_update_t1.elapsed();
-                last_update = Instant::now();
+            if !self.game_pause {
+                if Instant::now() - last_update >= Duration::from_millis(100) {
+                    let time_to_update_t1 = Instant::now();
+                    self.game_table = self.update_game_table(self.game_table.clone());
+                    self.time_to_update = time_to_update_t1.elapsed();
+                    last_update = Instant::now();
+                }
             }
             let time_to_draw_t1 = Instant::now();
             terminal.draw(|frame| self.draw(frame))?;
@@ -69,6 +72,7 @@ impl App {
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
+            KeyCode::Char(' ') => self.toggle_game_pause(),
             _ => {}
         }
     }
@@ -112,6 +116,10 @@ impl App {
         new_game_table
     }
 
+    fn toggle_game_pause(&mut self) {
+        self.game_pause = !self.game_pause;
+    }
+
     fn exit(&mut self) {
         self.exit = true;
     }
@@ -127,6 +135,8 @@ impl Widget for &App {
             format!(" {}", self.time_to_update.as_millis()).blue(),
             ", Time to draw [ms]".into(),
             format!(" {}", self.time_to_draw.as_millis()).blue(),
+            ", Pause".into(),
+            " <Space>".bold().blue(),
         ]);
 
         Paragraph::new(Text::from(game_table_printed))
