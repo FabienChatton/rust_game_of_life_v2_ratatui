@@ -1,16 +1,16 @@
-use std::io;
 use crossterm::event::{self, poll, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::layout::Rect;
 use ratatui::buffer::Buffer;
-use ratatui::text::{Line, Text};
-use ratatui::widgets::{Block, Paragraph};
+use ratatui::layout::Rect;
+use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::Widget;
+use ratatui::widgets::{Block, Paragraph};
 use ratatui::DefaultTerminal;
 use ratatui::Frame;
+use std::io;
 
-use std::time::{Duration, Instant};
 use rand::Rng;
-use ratatui::style::Stylize;
+use ratatui::style::{Color, Style, Stylize};
+use std::time::{Duration, Instant};
 
 type GameTable = Vec<Vec<bool>>;
 
@@ -29,6 +29,7 @@ struct App {
     time_to_update: Duration,
     time_to_draw: Duration,
     game_pause: bool,
+    game_table_user_curser: (usize, usize),
 }
 impl App {
     fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
@@ -73,6 +74,10 @@ impl App {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
             KeyCode::Char(' ') => self.toggle_game_pause(),
+            KeyCode::Left => self.game_table_user_curser_move_left(),
+            KeyCode::Right => self.game_table_user_curser_move_right(),
+            KeyCode::Up => self.game_table_user_curser_move_up(),
+            KeyCode::Down => self.game_table_user_curser_move_down(),
             _ => {}
         }
     }
@@ -120,6 +125,39 @@ impl App {
         self.game_pause = !self.game_pause;
     }
 
+    fn game_table_user_curser_move_left(&mut self) {
+        if self.game_table_user_curser.1 > 0 {
+            self.game_table_user_curser.1 -= 1;
+        } else {
+            self.game_table_user_curser.1 = self.game_table_size.1 - 1;
+        }
+    }
+
+    fn game_table_user_curser_move_right(&mut self) {
+        if self.game_table_user_curser.1 < self.game_table_size.1 - 1 {
+            self.game_table_user_curser.1 += 1;
+        } else {
+            self.game_table_user_curser.1 = 0;
+        }
+    }
+
+    fn game_table_user_curser_move_up(&mut self) {
+        if self.game_table_user_curser.0 > 0 {
+            self.game_table_user_curser.0 -= 1;
+        } else {
+            self.game_table_user_curser.0 = self.game_table_size.0 - 1;
+        }
+    }
+
+    fn game_table_user_curser_move_down(&mut self) {
+        if self.game_table_user_curser.0 < self.game_table_size.0 - 1 {
+            self.game_table_user_curser.0 += 1;
+        } else {
+            self.game_table_user_curser.0 = 0;
+        }
+    }
+
+
     fn exit(&mut self) {
         self.exit = true;
     }
@@ -127,7 +165,7 @@ impl App {
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let game_table_printed = print_game_table(&self.game_table);
+        let game_table_printed = print_game_table(&self.game_table, self.game_table_user_curser);
         let instructions = Line::from(vec![
             "Quit".into(),
             " <q>".bold().blue(),
@@ -139,7 +177,7 @@ impl Widget for &App {
             " <Space>".bold().blue(),
         ]);
 
-        Paragraph::new(Text::from(game_table_printed))
+        Paragraph::new(game_table_printed)
             .block(Block::new().title(instructions.centered()))
             .render(area, buf)
     }
@@ -172,17 +210,22 @@ fn initialize_empty_game_table(size: (usize, usize)) -> GameTable {
     game_table
 }
 
-fn print_game_table(game_table: &GameTable) -> String {
-    let mut s_buffer = String::new();
-    for row in game_table.iter() {
-        for cell in row.iter() {
-            if *cell {
-                s_buffer.push('#');
+fn print_game_table(game_table: &GameTable, cursor_pos: (usize, usize)) -> Text {
+    let mut lines = Vec::new();
+
+    for (x, row) in game_table.iter().enumerate() {
+        let mut spans = Vec::new();
+        for (y, cell) in row.iter().enumerate() {
+            let character = if *cell { "#" } else { " " };
+            let span = if x == cursor_pos.0 && y == cursor_pos.1 {
+                Span::styled(character, Style::default().bg(Color::LightGreen))
             } else {
-                s_buffer.push(' ');
-            }
+                Span::styled(character, Style::default())
+            };
+            spans.push(span);
         }
-        s_buffer.push('\n');
+        lines.push(Line::from(spans));
     }
-    s_buffer
+
+    Text::from(lines)
 }
