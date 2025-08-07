@@ -78,6 +78,7 @@ impl App {
             KeyCode::Right => self.game_table_user_curser_move_right(),
             KeyCode::Up => self.game_table_user_curser_move_up(),
             KeyCode::Down => self.game_table_user_curser_move_down(),
+            KeyCode::Char('s') => self.switch_cell_state(),
             _ => {}
         }
     }
@@ -157,6 +158,37 @@ impl App {
         }
     }
 
+    fn print_game_table(&self) -> Text {
+        let mut lines = Vec::new();
+
+        for (x, row) in self.game_table.iter().enumerate() {
+            let mut spans = Vec::new();
+            for (y, cell) in row.iter().enumerate() {
+                let character = if *cell { "#" } else { " " };
+                let span = if self.game_pause &&
+                    x == self.game_table_user_curser.0 && y == self.game_table_user_curser.1
+                {
+                    Span::styled(character, Style::default().bg(Color::LightGreen))
+                } else {
+                    Span::styled(character, Style::default())
+                };
+                spans.push(span);
+            }
+            lines.push(Line::from(spans));
+        }
+
+        Text::from(lines)
+    }
+
+    fn switch_cell_state(&mut self) {
+        if self.game_pause {
+            let x = self.game_table_user_curser.0;
+            let y = self.game_table_user_curser.1;
+
+            self.game_table[x][y] = !self.game_table[x][y];
+
+        }
+    }
 
     fn exit(&mut self) {
         self.exit = true;
@@ -165,7 +197,7 @@ impl App {
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let game_table_printed = print_game_table(&self.game_table, self.game_table_user_curser);
+        let game_table_printed = self.print_game_table();
         let instructions = Line::from(vec![
             "Quit".into(),
             " <q>".bold().blue(),
@@ -175,6 +207,10 @@ impl Widget for &App {
             format!(" {}", self.time_to_draw.as_millis()).blue(),
             ", Pause".into(),
             " <Space>".bold().blue(),
+            " Move cursor while Pause with".into(),
+            " <Arrow>".bold().blue(),
+            " Switch cell state".into(),
+            " <s>".bold().blue(),
         ]);
 
         Paragraph::new(game_table_printed)
@@ -208,24 +244,4 @@ fn initialize_empty_game_table(size: (usize, usize)) -> GameTable {
     }
 
     game_table
-}
-
-fn print_game_table(game_table: &GameTable, cursor_pos: (usize, usize)) -> Text {
-    let mut lines = Vec::new();
-
-    for (x, row) in game_table.iter().enumerate() {
-        let mut spans = Vec::new();
-        for (y, cell) in row.iter().enumerate() {
-            let character = if *cell { "#" } else { " " };
-            let span = if x == cursor_pos.0 && y == cursor_pos.1 {
-                Span::styled(character, Style::default().bg(Color::LightGreen))
-            } else {
-                Span::styled(character, Style::default())
-            };
-            spans.push(span);
-        }
-        lines.push(Line::from(spans));
-    }
-
-    Text::from(lines)
 }
