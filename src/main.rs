@@ -29,7 +29,7 @@ struct App {
     time_to_update: Duration,
     time_to_draw: Duration,
     game_pause: bool,
-    game_table_user_curser: (usize, usize),
+    game_table_user_cursor: (usize, usize),
 }
 impl App {
     fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
@@ -74,10 +74,10 @@ impl App {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
             KeyCode::Char(' ') => self.toggle_game_pause(),
-            KeyCode::Left => self.game_table_user_curser_move_left(),
-            KeyCode::Right => self.game_table_user_curser_move_right(),
-            KeyCode::Up => self.game_table_user_curser_move_up(),
-            KeyCode::Down => self.game_table_user_curser_move_down(),
+            KeyCode::Left => self.game_table_user_cursor_move_left(),
+            KeyCode::Right => self.game_table_user_cursor_move_right(),
+            KeyCode::Up => self.game_table_user_cursor_move_up(),
+            KeyCode::Down => self.game_table_user_cursor_move_down(),
             KeyCode::Char('s') => self.switch_cell_state(),
             _ => {}
         }
@@ -126,35 +126,35 @@ impl App {
         self.game_pause = !self.game_pause;
     }
 
-    fn game_table_user_curser_move_left(&mut self) {
-        if self.game_table_user_curser.1 > 0 {
-            self.game_table_user_curser.1 -= 1;
+    fn game_table_user_cursor_move_left(&mut self) {
+        if self.game_table_user_cursor.1 > 0 {
+            self.game_table_user_cursor.1 -= 1;
         } else {
-            self.game_table_user_curser.1 = self.game_table_size.1 - 1;
+            self.game_table_user_cursor.1 = self.game_table_size.1 - 1;
         }
     }
 
-    fn game_table_user_curser_move_right(&mut self) {
-        if self.game_table_user_curser.1 < self.game_table_size.1 - 1 {
-            self.game_table_user_curser.1 += 1;
+    fn game_table_user_cursor_move_right(&mut self) {
+        if self.game_table_user_cursor.1 < self.game_table_size.1 - 1 {
+            self.game_table_user_cursor.1 += 1;
         } else {
-            self.game_table_user_curser.1 = 0;
+            self.game_table_user_cursor.1 = 0;
         }
     }
 
-    fn game_table_user_curser_move_up(&mut self) {
-        if self.game_table_user_curser.0 > 0 {
-            self.game_table_user_curser.0 -= 1;
+    fn game_table_user_cursor_move_up(&mut self) {
+        if self.game_table_user_cursor.0 > 0 {
+            self.game_table_user_cursor.0 -= 1;
         } else {
-            self.game_table_user_curser.0 = self.game_table_size.0 - 1;
+            self.game_table_user_cursor.0 = self.game_table_size.0 - 1;
         }
     }
 
-    fn game_table_user_curser_move_down(&mut self) {
-        if self.game_table_user_curser.0 < self.game_table_size.0 - 1 {
-            self.game_table_user_curser.0 += 1;
+    fn game_table_user_cursor_move_down(&mut self) {
+        if self.game_table_user_cursor.0 < self.game_table_size.0 - 1 {
+            self.game_table_user_cursor.0 += 1;
         } else {
-            self.game_table_user_curser.0 = 0;
+            self.game_table_user_cursor.0 = 0;
         }
     }
 
@@ -166,7 +166,7 @@ impl App {
             for (y, cell) in row.iter().enumerate() {
                 let character = if *cell { "#" } else { " " };
                 let span = if self.game_pause &&
-                    x == self.game_table_user_curser.0 && y == self.game_table_user_curser.1
+                    x == self.game_table_user_cursor.0 && y == self.game_table_user_cursor.1
                 {
                     Span::styled(character, Style::default().bg(Color::LightGreen))
                 } else {
@@ -182,8 +182,8 @@ impl App {
 
     fn switch_cell_state(&mut self) {
         if self.game_pause {
-            let x = self.game_table_user_curser.0;
-            let y = self.game_table_user_curser.1;
+            let x = self.game_table_user_cursor.0;
+            let y = self.game_table_user_cursor.1;
 
             self.game_table[x][y] = !self.game_table[x][y];
 
