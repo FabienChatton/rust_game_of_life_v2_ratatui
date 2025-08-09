@@ -27,19 +27,22 @@ struct App {
     game_table: GameTable,
     game_table_size: (usize, usize),
     time_to_update: Duration,
+    update_duration_millis: u64,
     time_to_draw: Duration,
     game_pause: bool,
     game_table_user_cursor: (usize, usize),
 }
 impl App {
+    const DEFAULT_UPDATE_DURATION_MILLIS: u64 = 100;
     fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let terminal_size = terminal.size()?;
+        self.update_duration_millis = App::DEFAULT_UPDATE_DURATION_MILLIS;
         self.game_table_size = (terminal_size.height as usize, terminal_size.width as usize);
         self.game_table = initialize_game_table(self.game_table_size);
         let mut last_update = Instant::now();
         while !self.exit {
             if !self.game_pause {
-                if Instant::now() - last_update >= Duration::from_millis(100) {
+                if Instant::now() - last_update >= Duration::from_millis(self.update_duration_millis) {
                     let time_to_update_t1 = Instant::now();
                     self.game_table = self.update_game_table(self.game_table.clone());
                     self.time_to_update = time_to_update_t1.elapsed();
@@ -79,6 +82,9 @@ impl App {
             KeyCode::Up => self.game_table_user_cursor_move_up(),
             KeyCode::Down => self.game_table_user_cursor_move_down(),
             KeyCode::Char('s') => self.switch_cell_state(),
+            KeyCode::Char('a') => self.increase_update_duration(10),
+            KeyCode::Char('d') => self.decrease_update_duration(10),
+            KeyCode::Char('r') => self.reset_update_duration(),
             _ => {}
         }
     }
@@ -190,6 +196,20 @@ impl App {
         }
     }
 
+    fn increase_update_duration(&mut self, amount_millis: u64) {
+        self.update_duration_millis += amount_millis;
+    }
+
+    fn decrease_update_duration(&mut self, amount_millis: u64) {
+        if self.update_duration_millis - amount_millis > 0 {
+            self.update_duration_millis -= amount_millis;
+        }
+    }
+
+    fn reset_update_duration(&mut self) {
+        self.update_duration_millis = App::DEFAULT_UPDATE_DURATION_MILLIS;
+    }
+
     fn exit(&mut self) {
         self.exit = true;
     }
@@ -211,6 +231,12 @@ impl Widget for &App {
             " <Arrow>".bold().blue(),
             " Switch cell state".into(),
             " <s>".bold().blue(),
+            " decrease update duration".into(),
+            " <a>".bold().blue(),
+            " increase update duration".into(),
+            " <d>".bold().blue(),
+            " reset update duration".into(),
+            " <r>".bold().blue(),
         ]);
 
         Paragraph::new(game_table_printed)
