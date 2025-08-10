@@ -1,9 +1,9 @@
 use crossterm::event::{self, poll, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::Widget;
-use ratatui::widgets::{Block, Paragraph};
+use ratatui::widgets::Paragraph;
 use ratatui::DefaultTerminal;
 use ratatui::Frame;
 use std::io;
@@ -11,6 +11,7 @@ use std::io;
 use rand::Rng;
 use ratatui::style::{Color, Style, Stylize};
 use std::time::{Duration, Instant};
+use ratatui::prelude::Direction;
 
 type GameTable = Vec<Vec<bool>>;
 
@@ -58,7 +59,36 @@ impl App {
     }
 
     fn draw(&self, frame: &mut Frame) {
-        frame.render_widget(self, frame.area());
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(1),
+                Constraint::Percentage(100),
+            ]).split(frame.area());
+
+        let instructions = Line::from(vec![
+            "Quit".into(),
+            " <q>".bold().blue(),
+            ", Time to update [ms]".into(),
+            format!(" {}", self.time_to_update.as_millis()).blue(),
+            ", Time to draw [ms]".into(),
+            format!(" {}", self.time_to_draw.as_millis()).blue(),
+            ", Pause".into(),
+            " <Space>".bold().blue(),
+            " Move cursor while Pause with".into(),
+            " <Arrow>".bold().blue(),
+            " Switch cell state".into(),
+            " <s>".bold().blue(),
+            " decrease update duration".into(),
+            " <a>".bold().blue(),
+            " increase update duration".into(),
+            " <d>".bold().blue(),
+            " reset update duration".into(),
+            " <r>".bold().blue(),
+        ]);
+
+        frame.render_widget(instructions, layout[0]);
+        frame.render_widget(self, layout[1]);
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
@@ -218,29 +248,7 @@ impl App {
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let game_table_printed = self.print_game_table();
-        let instructions = Line::from(vec![
-            "Quit".into(),
-            " <q>".bold().blue(),
-            ", Time to update [ms]".into(),
-            format!(" {}", self.time_to_update.as_millis()).blue(),
-            ", Time to draw [ms]".into(),
-            format!(" {}", self.time_to_draw.as_millis()).blue(),
-            ", Pause".into(),
-            " <Space>".bold().blue(),
-            " Move cursor while Pause with".into(),
-            " <Arrow>".bold().blue(),
-            " Switch cell state".into(),
-            " <s>".bold().blue(),
-            " decrease update duration".into(),
-            " <a>".bold().blue(),
-            " increase update duration".into(),
-            " <d>".bold().blue(),
-            " reset update duration".into(),
-            " <r>".bold().blue(),
-        ]);
-
         Paragraph::new(game_table_printed)
-            .block(Block::new().title(instructions.centered()))
             .render(area, buf)
     }
 }
