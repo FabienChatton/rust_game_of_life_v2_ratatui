@@ -32,6 +32,8 @@ struct App {
     time_to_draw: Duration,
     game_pause: bool,
     game_table_user_cursor: (usize, usize),
+    fps: u32,
+    frame_count: u32,
 }
 impl App {
     const DEFAULT_UPDATE_DURATION_MILLIS: u64 = 100;
@@ -40,6 +42,7 @@ impl App {
         self.update_duration_millis = App::DEFAULT_UPDATE_DURATION_MILLIS;
         self.game_table_size = (terminal_size.height as usize, terminal_size.width as usize);
         self.game_table = initialize_game_table(self.game_table_size);
+        let mut last_fps_update = Instant::now();
         let mut last_update = Instant::now();
         while !self.exit {
             if !self.game_pause {
@@ -50,10 +53,21 @@ impl App {
                     last_update = Instant::now();
                 }
             }
+
             let time_to_draw_t1 = Instant::now();
             terminal.draw(|frame| self.draw(frame))?;
             self.time_to_draw = time_to_draw_t1.elapsed();
-            self.handle_events()?
+
+            self.frame_count += 1;
+            let now = Instant::now();
+            let elapsed = now - last_fps_update;
+            if elapsed >= Duration::from_secs(1) {
+                self.fps = self.frame_count;
+                self.frame_count = 0;
+                last_fps_update = now;
+            }
+
+            self.handle_events()?;
         }
         Ok(())
     }
@@ -62,17 +76,14 @@ impl App {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(1),
-                Constraint::Percentage(100),
+                Constraint::Length(1),
+                Constraint::Length(self.game_table_size.0 as u16),
+                Constraint::Length(1),
             ]).split(frame.area());
 
         let instructions = Line::from(vec![
             "Quit".into(),
             " <q>".bold().blue(),
-            ", Time to update [ms]".into(),
-            format!(" {}", self.time_to_update.as_millis()).blue(),
-            ", Time to draw [ms]".into(),
-            format!(" {}", self.time_to_draw.as_millis()).blue(),
             ", Pause".into(),
             " <Space>".bold().blue(),
             " Move cursor while Pause with".into(),
@@ -87,8 +98,18 @@ impl App {
             " <r>".bold().blue(),
         ]);
 
+        let information = Line::from(vec![
+            "Time Update [ms]".into(),
+            format!(" {}", self.time_to_update.as_millis()).blue(),
+            ", Time Draw [ms]".into(),
+            format!(" {}", self.time_to_draw.as_millis()).blue(),
+            ", fps".into(),
+            format!(" {}", self.fps).blue(),
+        ]);
+
         frame.render_widget(instructions, layout[0]);
         frame.render_widget(self, layout[1]);
+        frame.render_widget(information, layout[2]);
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
