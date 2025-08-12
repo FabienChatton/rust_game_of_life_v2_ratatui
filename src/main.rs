@@ -105,6 +105,8 @@ impl App {
             format!(" {}", self.time_to_draw.as_millis()).blue(),
             ", fps".into(),
             format!(" {}", self.fps).blue(),
+            ", update/[s]".into(),
+            format!(" {:.2}", self.calculate_updates_per_second()).blue(),
         ]);
 
         frame.render_widget(instructions, layout[0]);
@@ -259,6 +261,10 @@ impl App {
 
     fn reset_update_duration(&mut self) {
         self.update_duration_millis = App::DEFAULT_UPDATE_DURATION_MILLIS;
+    }
+
+    fn calculate_updates_per_second(&self) -> f64 {
+        1.0 / (self.update_duration_millis as f64 / 1000.0)
     }
 
     fn exit(&mut self) {
