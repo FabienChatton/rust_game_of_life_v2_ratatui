@@ -28,7 +28,7 @@ struct App {
     game_table: GameTable,
     game_table_size: (usize, usize),
     time_to_update: Duration,
-    update_duration_millis: u64,
+    update_per_second: u16,
     time_to_draw: Duration,
     game_pause: bool,
     game_table_user_cursor: (usize, usize),
@@ -36,17 +36,17 @@ struct App {
     frame_count: u32,
 }
 impl App {
-    const DEFAULT_UPDATE_DURATION_MILLIS: u64 = 100;
+    const DEFAULT_UPDATE_PER_SECOND: u16 = 10;
     fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let terminal_size = terminal.size()?;
-        self.update_duration_millis = App::DEFAULT_UPDATE_DURATION_MILLIS;
+        self.update_per_second = App::DEFAULT_UPDATE_PER_SECOND;
         self.game_table_size = (terminal_size.height as usize, terminal_size.width as usize);
         self.game_table = initialize_game_table(self.game_table_size);
         let mut last_fps_update = Instant::now();
         let mut last_update = Instant::now();
         while !self.exit {
             if !self.game_pause {
-                if Instant::now() - last_update >= Duration::from_millis(self.update_duration_millis) {
+                if Instant::now() - last_update >= Duration::from_secs_f64(1.0 / self.update_per_second as f64) {
                     let time_to_update_t1 = Instant::now();
                     self.game_table = self.update_game_table(self.game_table.clone());
                     self.time_to_update = time_to_update_t1.elapsed();
@@ -90,11 +90,11 @@ impl App {
             " <Arrow>".bold().blue(),
             " Switch cell state".into(),
             " <s>".bold().blue(),
-            " decrease update duration".into(),
+            " decrease update rate".into(),
             " <a>".bold().blue(),
-            " increase update duration".into(),
+            " increase update rate".into(),
             " <d>".bold().blue(),
-            " reset update duration".into(),
+            " reset update rate".into(),
             " <r>".bold().blue(),
         ]);
 
@@ -106,7 +106,7 @@ impl App {
             ", fps".into(),
             format!(" {}", self.fps).blue(),
             ", update/[s]".into(),
-            format!(" {:.2}", self.calculate_updates_per_second()).blue(),
+            format!(" {}", self.update_per_second).blue(),
         ]);
 
         frame.render_widget(instructions, layout[0]);
@@ -135,8 +135,8 @@ impl App {
             KeyCode::Up => self.game_table_user_cursor_move_up(),
             KeyCode::Down => self.game_table_user_cursor_move_down(),
             KeyCode::Char('s') => self.switch_cell_state(),
-            KeyCode::Char('a') => self.increase_update_duration(10),
-            KeyCode::Char('d') => self.decrease_update_duration(10),
+            KeyCode::Char('a') => self.decrease_update_duration(1),
+            KeyCode::Char('d') => self.increase_update_duration(1),
             KeyCode::Char('r') => self.reset_update_duration(),
             _ => {}
         }
@@ -249,22 +249,18 @@ impl App {
         }
     }
 
-    fn increase_update_duration(&mut self, amount_millis: u64) {
-        self.update_duration_millis += amount_millis;
+    fn increase_update_duration(&mut self, update_per_second: u16) {
+        self.update_per_second += update_per_second;
     }
 
-    fn decrease_update_duration(&mut self, amount_millis: u64) {
-        if self.update_duration_millis - amount_millis > 0 {
-            self.update_duration_millis -= amount_millis;
+    fn decrease_update_duration(&mut self, update_per_second: u16) {
+        if self.update_per_second - update_per_second > 0 {
+            self.update_per_second -= update_per_second;
         }
     }
 
     fn reset_update_duration(&mut self) {
-        self.update_duration_millis = App::DEFAULT_UPDATE_DURATION_MILLIS;
-    }
-
-    fn calculate_updates_per_second(&self) -> f64 {
-        1.0 / (self.update_duration_millis as f64 / 1000.0)
+        self.update_per_second = App::DEFAULT_UPDATE_PER_SECOND;
     }
 
     fn exit(&mut self) {
