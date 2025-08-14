@@ -34,6 +34,7 @@ struct App {
     game_table_user_cursor: (usize, usize),
     fps: u32,
     frame_count: u32,
+    step_by_step_next: bool,
 }
 impl App {
     const DEFAULT_UPDATE_PER_SECOND: u16 = 10;
@@ -52,6 +53,9 @@ impl App {
                     self.time_to_update = time_to_update_t1.elapsed();
                     last_update = Instant::now();
                 }
+            } else if self.step_by_step_next {
+                self.game_table = self.update_game_table(self.game_table.clone());
+                self.step_by_step_next = false;
             }
 
             let time_to_draw_t1 = Instant::now();
@@ -96,6 +100,8 @@ impl App {
             " <d>".bold().blue(),
             " reset update rate".into(),
             " <r>".bold().blue(),
+            ", step by step".into(),
+            " <t>".bold().blue(),
         ]);
 
         let information = Line::from(vec![
@@ -138,6 +144,7 @@ impl App {
             KeyCode::Char('a') => self.decrease_update_duration(1),
             KeyCode::Char('d') => self.increase_update_duration(1),
             KeyCode::Char('r') => self.reset_update_duration(),
+            KeyCode::Char('t') => self.toggle_step_by_step(),
             _ => {}
         }
     }
@@ -256,6 +263,13 @@ impl App {
     fn decrease_update_duration(&mut self, update_per_second: u16) {
         if self.update_per_second - update_per_second > 0 {
             self.update_per_second -= update_per_second;
+        }
+    }
+
+    fn toggle_step_by_step(&mut self) {
+        self.step_by_step_next = true;
+        if !self.game_pause {
+            self.game_pause = true;
         }
     }
 
