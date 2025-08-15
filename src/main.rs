@@ -28,30 +28,33 @@ struct App {
     game_table: GameTable,
     game_table_size: (usize, usize),
     time_to_update: Duration,
-    update_per_second: u16,
+    update_per_second_max: u16,
+    update_par_second_real: u16,
     time_to_draw: Duration,
     game_pause: bool,
     game_table_user_cursor: (usize, usize),
     fps: u32,
-    frame_count: u32,
     step_by_step_next: bool,
 }
 impl App {
-    const DEFAULT_UPDATE_PER_SECOND: u16 = 10;
+    const DEFAULT_MAX_UPDATE_PER_SECOND: u16 = 10;
     fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let terminal_size = terminal.size()?;
-        self.update_per_second = App::DEFAULT_UPDATE_PER_SECOND;
+        self.update_per_second_max = App::DEFAULT_MAX_UPDATE_PER_SECOND;
         self.game_table_size = (terminal_size.height as usize, terminal_size.width as usize);
         self.game_table = initialize_game_table(self.game_table_size);
         let mut last_fps_update = Instant::now();
         let mut last_update = Instant::now();
+        let mut frame_count = 0;
+        let mut update_per_second_count = 0;
         while !self.exit {
             if !self.game_pause {
-                if Instant::now() - last_update >= Duration::from_secs_f64(1.0 / self.update_per_second as f64) {
+                if Instant::now() - last_update >= Duration::from_secs_f64(1.0 / self.update_per_second_max as f64) {
                     let time_to_update_t1 = Instant::now();
                     self.game_table = self.update_game_table(self.game_table.clone());
                     self.time_to_update = time_to_update_t1.elapsed();
                     last_update = Instant::now();
+                    update_per_second_count += 1;
                 }
             } else if self.step_by_step_next {
                 self.game_table = self.update_game_table(self.game_table.clone());
@@ -62,13 +65,16 @@ impl App {
             terminal.draw(|frame| self.draw(frame))?;
             self.time_to_draw = time_to_draw_t1.elapsed();
 
-            self.frame_count += 1;
+            frame_count += 1;
             let now = Instant::now();
             let elapsed = now - last_fps_update;
             if elapsed >= Duration::from_secs(1) {
-                self.fps = self.frame_count;
-                self.frame_count = 0;
+                self.fps = frame_count;
+                frame_count = 0;
                 last_fps_update = now;
+
+                self.update_par_second_real = update_per_second_count;
+                update_per_second_count = 0;
             }
 
             self.handle_events()?;
@@ -111,8 +117,10 @@ impl App {
             format!(" {}", self.time_to_draw.as_millis()).blue(),
             ", fps".into(),
             format!(" {}", self.fps).blue(),
-            ", update/[s]".into(),
-            format!(" {}", self.update_per_second).blue(),
+            ", max update/[s]".into(),
+            format!(" {}", self.update_per_second_max).blue(),
+            ", real update/[s]".into(),
+            format!(" {}", self.update_par_second_real).blue(),
         ]);
 
         frame.render_widget(instructions, layout[0]);
@@ -141,9 +149,9 @@ impl App {
             KeyCode::Up => self.game_table_user_cursor_move_up(),
             KeyCode::Down => self.game_table_user_cursor_move_down(),
             KeyCode::Char('s') => self.switch_cell_state(),
-            KeyCode::Char('a') => self.decrease_update_duration(1),
-            KeyCode::Char('d') => self.increase_update_duration(1),
-            KeyCode::Char('r') => self.reset_update_duration(),
+            KeyCode::Char('a') => self.decrease_update_per_second_max(1),
+            KeyCode::Char('d') => self.increase_update_per_second_max(1),
+            KeyCode::Char('r') => self.reset_update_per_second_max(),
             KeyCode::Char('t') => self.toggle_step_by_step(),
             _ => {}
         }
@@ -256,13 +264,13 @@ impl App {
         }
     }
 
-    fn increase_update_duration(&mut self, update_per_second: u16) {
-        self.update_per_second += update_per_second;
+    fn increase_update_per_second_max(&mut self, update_per_second: u16) {
+        self.update_per_second_max += update_per_second;
     }
 
-    fn decrease_update_duration(&mut self, update_per_second: u16) {
-        if self.update_per_second - update_per_second > 0 {
-            self.update_per_second -= update_per_second;
+    fn decrease_update_per_second_max(&mut self, update_per_second: u16) {
+        if self.update_per_second_max - update_per_second > 0 {
+            self.update_per_second_max -= update_per_second;
         }
     }
 
@@ -273,8 +281,8 @@ impl App {
         }
     }
 
-    fn reset_update_duration(&mut self) {
-        self.update_per_second = App::DEFAULT_UPDATE_PER_SECOND;
+    fn reset_update_per_second_max(&mut self) {
+        self.update_per_second_max = App::DEFAULT_MAX_UPDATE_PER_SECOND;
     }
 
     fn exit(&mut self) {
