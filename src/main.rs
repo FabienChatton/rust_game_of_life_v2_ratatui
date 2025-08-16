@@ -108,6 +108,8 @@ impl App {
             " <r>".bold().blue(),
             ", step by step".into(),
             " <t>".bold().blue(),
+            ", reset game".into(),
+            " <n>".bold().blue(),
         ]);
 
         let information = Line::from(vec![
@@ -153,6 +155,7 @@ impl App {
             KeyCode::Char('d') => self.increase_update_per_second_max(1),
             KeyCode::Char('r') => self.reset_update_per_second_max(),
             KeyCode::Char('t') => self.toggle_step_by_step(),
+            KeyCode::Char('n') => self.reset_game_table(),
             _ => {}
         }
     }
@@ -283,6 +286,10 @@ impl App {
 
     fn reset_update_per_second_max(&mut self) {
         self.update_per_second_max = App::DEFAULT_MAX_UPDATE_PER_SECOND;
+    }
+
+    fn reset_game_table(&mut self) {
+        self.game_table = initialize_empty_game_table(self.game_table_size);
     }
 
     fn exit(&mut self) {
