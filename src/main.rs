@@ -1,4 +1,4 @@
-use crossterm::event::{self, poll, Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{self, poll, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::text::{Line, Span, Text};
@@ -33,6 +33,7 @@ struct App {
     time_to_draw: Duration,
     game_pause: bool,
     game_table_user_cursor: (usize, usize),
+    game_table_user_cursor2: (usize, usize),
     fps: u32,
     step_by_step_next: bool,
 }
@@ -146,10 +147,10 @@ impl App {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
             KeyCode::Char(' ') => self.toggle_game_pause(),
-            KeyCode::Left => self.game_table_user_cursor_move_left(),
-            KeyCode::Right => self.game_table_user_cursor_move_right(),
-            KeyCode::Up => self.game_table_user_cursor_move_up(),
-            KeyCode::Down => self.game_table_user_cursor_move_down(),
+            KeyCode::Left => self.game_table_user_cursor_move(key_event.code, key_event),
+            KeyCode::Right => self.game_table_user_cursor_move(key_event.code, key_event),
+            KeyCode::Up => self.game_table_user_cursor_move(key_event.code, key_event),
+            KeyCode::Down => self.game_table_user_cursor_move(key_event.code, key_event),
             KeyCode::Char('s') => self.switch_cell_state(),
             KeyCode::Char('a') => self.decrease_update_per_second_max(1),
             KeyCode::Char('d') => self.increase_update_per_second_max(1),
@@ -203,35 +204,43 @@ impl App {
         self.game_pause = !self.game_pause;
     }
 
-    fn game_table_user_cursor_move_left(&mut self) {
-        if self.game_table_user_cursor.1 > 0 {
-            self.game_table_user_cursor.1 -= 1;
+    fn game_table_user_cursor_move(&mut self, direction: KeyCode, key_event: KeyEvent) {
+        let (x, y) = if key_event.modifiers == KeyModifiers::SHIFT {
+            (&mut self.game_table_user_cursor2.0, &mut self.game_table_user_cursor2.1)
         } else {
-            self.game_table_user_cursor.1 = self.game_table_size.1 - 1;
-        }
-    }
+            (&mut self.game_table_user_cursor.0, &mut self.game_table_user_cursor.1)
+        };
 
-    fn game_table_user_cursor_move_right(&mut self) {
-        if self.game_table_user_cursor.1 < self.game_table_size.1 - 1 {
-            self.game_table_user_cursor.1 += 1;
-        } else {
-            self.game_table_user_cursor.1 = 0;
-        }
-    }
-
-    fn game_table_user_cursor_move_up(&mut self) {
-        if self.game_table_user_cursor.0 > 0 {
-            self.game_table_user_cursor.0 -= 1;
-        } else {
-            self.game_table_user_cursor.0 = self.game_table_size.0 - 1;
-        }
-    }
-
-    fn game_table_user_cursor_move_down(&mut self) {
-        if self.game_table_user_cursor.0 < self.game_table_size.0 - 1 {
-            self.game_table_user_cursor.0 += 1;
-        } else {
-            self.game_table_user_cursor.0 = 0;
+        match direction {
+            KeyCode::Up => {
+                if *x > 0 {
+                    *x -= 1;
+                } else {
+                    *x = self.game_table_size.0 - 1;
+                }
+            }
+            KeyCode::Down => {
+                if *x < self.game_table_size.0 - 1 {
+                    *x += 1;
+                } else {
+                    *x = 0;
+                }
+            }
+            KeyCode::Left => {
+                if *y > 0 {
+                    *y -= 1;
+                } else {
+                    *y = self.game_table_size.1 - 1;
+                }
+            }
+            KeyCode::Right => {
+                if *y < self.game_table_size.1 - 1 {
+                    *y += 1;
+                } else {
+                    *y = 0;
+                }
+            }
+            _ => {}
         }
     }
 
@@ -242,8 +251,9 @@ impl App {
             let mut spans = Vec::new();
             for (y, cell) in row.iter().enumerate() {
                 let character = if *cell { "#" } else { " " };
-                let span = if self.game_pause &&
-                    x == self.game_table_user_cursor.0 && y == self.game_table_user_cursor.1
+                let span = if self.game_pause
+                    && ((x == self.game_table_user_cursor.0 && y == self.game_table_user_cursor.1)
+                    || (x == self.game_table_user_cursor2.0 && y == self.game_table_user_cursor2.1))
                 {
                     Span::styled(character, Style::default().bg(Color::LightGreen))
                 } else {
