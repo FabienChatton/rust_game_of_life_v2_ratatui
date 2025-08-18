@@ -257,7 +257,11 @@ impl App {
                 {
                     Span::styled(character, Style::default().bg(Color::LightGreen))
                 } else {
-                    Span::styled(character, Style::default())
+                    if self.game_pause && self.is_inside_user_cursor(x, y) {
+                        Span::styled(character, Style::default().bg(Color::Green))
+                    } else {
+                        Span::styled(character, Style::default())
+                    }
                 };
                 spans.push(span);
             }
@@ -300,6 +304,16 @@ impl App {
 
     fn reset_game_table(&mut self) {
         self.game_table = initialize_empty_game_table(self.game_table_size);
+    }
+
+    fn is_inside_user_cursor(&self, x: usize, y: usize) -> bool {
+        let (x1, y1) = self.game_table_user_cursor;
+        let (x2, y2) = self.game_table_user_cursor2;
+        let x_min = x1.min(x2);
+        let x_max = x1.max(x2);
+        let y_min = y1.min(y2);
+        let y_max = y1.max(y2);
+        x >= x_min && x <= x_max && y >= y_min && y <= y_max
     }
 
     fn exit(&mut self) {
