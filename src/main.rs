@@ -242,6 +242,11 @@ impl App {
             }
             _ => {}
         }
+
+        if key_event.modifiers != KeyModifiers::SHIFT {
+            self.game_table_user_cursor2.0 = self.game_table_user_cursor.0;
+            self.game_table_user_cursor2.1 = self.game_table_user_cursor.1;
+        }
     }
 
     fn print_game_table(&self) -> Text {
