@@ -2,7 +2,7 @@ use crossterm::event::{self, poll, Event, KeyCode, KeyEvent, KeyEventKind, KeyMo
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::Widget;
+use ratatui::widgets::{Row, Widget};
 use ratatui::widgets::Paragraph;
 use ratatui::DefaultTerminal;
 use ratatui::Frame;
@@ -157,6 +157,7 @@ impl App {
             KeyCode::Char('r') => self.reset_update_per_second_max(),
             KeyCode::Char('t') => self.toggle_step_by_step(),
             KeyCode::Char('n') => self.reset_game_table(),
+            KeyCode::Char('e') => self.save_selected_table(),
             _ => {}
         }
     }
@@ -319,6 +320,47 @@ impl App {
         let y_min = y1.min(y2);
         let y_max = y1.max(y2);
         x >= x_min && x <= x_max && y >= y_min && y <= y_max
+    }
+
+    fn save_selected_table(&self) {
+        if !self.game_pause {
+            return;
+        }
+
+        let (x1, y1) = self.game_table_user_cursor;
+        let (x2, y2) = self.game_table_user_cursor2;
+        let x_min = x1.min(x2);
+        let x_max = x1.max(x2);
+        let y_min = y1.min(y2);
+        let y_max = y1.max(y2);
+
+        let mut selected_table = Vec::new();
+
+        for x in x_min..=x_max {
+            let mut row = Vec::new();
+            for y in y_min..=y_max {
+                row.push(self.game_table[x][y]);
+            }
+            selected_table.push(row);
+        }
+
+        let mut row_file:Vec<u8> = Vec::new();
+
+        row_file.push(selected_table.len() as u8);
+        row_file.push(selected_table[0].len() as u8);
+        row_file.push(x_max as u8);
+        row_file.push(y_max as u8);
+        for row in selected_table {
+            for cell in row {
+                if cell {
+                    row_file.push(1);
+                } else {
+                    row_file.push(0);
+                }
+            }
+        }
+
+        std::fs::write("save.data", row_file).unwrap();
     }
 
     fn exit(&mut self) {
