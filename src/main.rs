@@ -158,6 +158,7 @@ impl App {
             KeyCode::Char('t') => self.toggle_step_by_step(),
             KeyCode::Char('n') => self.reset_game_table(),
             KeyCode::Char('e') => self.save_selected_table(),
+            KeyCode::Char('i') => self.import_selected_table(),
             _ => {}
         }
     }
@@ -348,8 +349,6 @@ impl App {
 
         row_file.push(selected_table.len() as u8);
         row_file.push(selected_table[0].len() as u8);
-        row_file.push(x_max as u8);
-        row_file.push(y_max as u8);
         for row in selected_table {
             for cell in row {
                 if cell {
@@ -361,6 +360,26 @@ impl App {
         }
 
         std::fs::write("save.data", row_file).unwrap();
+    }
+
+    fn import_selected_table(&mut self) {
+        if !self.game_pause {
+            return;
+        }
+
+        let vec = std::fs::read("save.data").unwrap();
+        let length = vec[0] as usize;
+        let height = vec[1] as usize;
+
+        let (x, y) = self.game_table_user_cursor;
+
+        let mut i = 2;
+        for row in x..(x + length) {
+            for cell in y..(y + height) {
+                self.game_table[row][cell] = if vec[i] == 0 { false } else { true };
+                i += 1;
+            }
+        }
     }
 
     fn exit(&mut self) {
