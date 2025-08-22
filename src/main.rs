@@ -111,6 +111,10 @@ impl App {
             " <t>".bold().blue(),
             ", reset game".into(),
             " <n>".bold().blue(),
+            ", export selected".into(),
+            " <e>".bold().blue(),
+            ", import data".into(),
+            " <i>".bold().blue(),
         ]);
 
         let information = Line::from(vec![
