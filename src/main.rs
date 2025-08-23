@@ -339,28 +339,35 @@ impl App {
         let y_min = y1.min(y2);
         let y_max = y1.max(y2);
 
-        let mut selected_table = Vec::new();
+        let mut selected_table = Vec::with_capacity(x_max - x_min + 1);
 
         for x in x_min..=x_max {
-            let mut row = Vec::new();
+            let mut row = Vec::with_capacity(y_max - y_min + 1);
             for y in y_min..=y_max {
                 row.push(self.game_table[x][y]);
             }
             selected_table.push(row);
         }
 
+        let mut bool_buffer: Vec<bool> = Vec::with_capacity(8);
+        let mut buffer_i = 0;
         let mut row_file:Vec<u8> = Vec::new();
 
         row_file.push(selected_table.len() as u8);
         row_file.push(selected_table[0].len() as u8);
         for row in selected_table {
             for cell in row {
-                if cell {
-                    row_file.push(1);
-                } else {
-                    row_file.push(0);
+                bool_buffer.push(cell);
+                buffer_i += 1;
+                if buffer_i == 8 {
+                    row_file.push(bool_8_to_u8(&bool_buffer));
+                    buffer_i = 0;
+                    bool_buffer.clear();
                 }
             }
+        }
+        if buffer_i != 0 {
+            row_file.push(bool_8_to_u8(&bool_buffer));
         }
 
         std::fs::write("save.data", row_file).unwrap();
@@ -375,12 +382,20 @@ impl App {
         let length = vec[0] as usize;
         let height = vec[1] as usize;
 
+        let mut bool_buffer: Vec<bool> = Vec::new();
+
+        for i in 2..vec.len() {
+            let bool_vec = u8_to_bool_8(vec[i]);
+            for j in 0..bool_vec.len() {
+                bool_buffer.push(bool_vec[j]);
+            }
+        }
         let (x, y) = self.game_table_user_cursor;
 
-        let mut i = 2;
+        let mut i = 0;
         for row in x..(x + length) {
             for cell in y..(y + height) {
-                self.game_table[row][cell] = if vec[i] == 0 { false } else { true };
+                self.game_table[row][cell] = bool_buffer[i];
                 i += 1;
             }
         }
@@ -424,4 +439,21 @@ fn initialize_empty_game_table(size: (usize, usize)) -> GameTable {
     }
 
     game_table
+}
+
+fn bool_8_to_u8(vec: &Vec<bool>) -> u8 {
+    let mut u8_buffer: u8 = 0;
+    for i in 0..vec.len() {
+        u8_buffer |= u8::from(vec[i]) << (7 - i)
+    }
+
+    u8_buffer
+}
+
+fn u8_to_bool_8(u: u8) -> Vec<bool> {
+    let mut bool_buffer: Vec<bool> = Vec::with_capacity(8);
+    for i in 0..8 {
+        bool_buffer.push(bool::from(u >> (7 - i) & 1 == 1));
+    }
+    bool_buffer
 }
