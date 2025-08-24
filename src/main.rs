@@ -314,7 +314,36 @@ impl App {
     }
 
     fn reset_game_table(&mut self) {
-        self.game_table = initialize_empty_game_table(self.game_table_size);
+        if self.game_table_user_cursor != self.game_table_user_cursor2 {
+            let (selected_table, (x, y)) = self.get_selected_table();
+            for row in x..x + selected_table.len() {
+                for cell in y..y + selected_table[0].len() {
+                    self.game_table[row][cell] = false;
+                }
+            }
+        } else {
+            self.game_table = initialize_empty_game_table(self.game_table_size);
+        }
+    }
+
+    fn get_selected_table(&self) -> (Vec<Vec<bool>>, (usize, usize)) {
+        let (x1, y1) = self.game_table_user_cursor;
+        let (x2, y2) = self.game_table_user_cursor2;
+        let x_min = x1.min(x2);
+        let x_max = x1.max(x2);
+        let y_min = y1.min(y2);
+        let y_max = y1.max(y2);
+
+        let mut selected_table = Vec::with_capacity(x_max - x_min + 1);
+
+        for x in x_min..=x_max {
+            let mut row = Vec::with_capacity(y_max - y_min + 1);
+            for y in y_min..=y_max {
+                row.push(self.game_table[x][y]);
+            }
+            selected_table.push(row);
+        }
+        (selected_table, (x_min, y_min))
     }
 
     fn is_inside_user_cursor(&self, x: usize, y: usize) -> bool {
@@ -332,22 +361,7 @@ impl App {
             return;
         }
 
-        let (x1, y1) = self.game_table_user_cursor;
-        let (x2, y2) = self.game_table_user_cursor2;
-        let x_min = x1.min(x2);
-        let x_max = x1.max(x2);
-        let y_min = y1.min(y2);
-        let y_max = y1.max(y2);
-
-        let mut selected_table = Vec::with_capacity(x_max - x_min + 1);
-
-        for x in x_min..=x_max {
-            let mut row = Vec::with_capacity(y_max - y_min + 1);
-            for y in y_min..=y_max {
-                row.push(self.game_table[x][y]);
-            }
-            selected_table.push(row);
-        }
+        let (selected_table, _) = self.get_selected_table();
 
         let mut bool_buffer: Vec<bool> = Vec::with_capacity(8);
         let mut buffer_i = 0;
